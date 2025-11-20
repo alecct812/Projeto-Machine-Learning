@@ -1,0 +1,2 @@
+# Este arquivo garante que a pasta reports/ seja versionada no Git
+# Os plots e figuras gerados pelo notebook serão salvos aqui

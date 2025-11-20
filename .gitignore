@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Docker
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# MLFlow
+mlruns/
+mlflow.db
+
+# Data (não versionar datasets grandes)
+archive/                        # Dataset MovieLens (muito grande)
+*.csv
+*.dat
+*.data
+
+# Reports (versionamos apenas o diretório vazio)
+reports/*.png
+reports/*.jpg
+reports/*.pdf
+# Manter o diretório
+!reports/.gitkeep
+
+# MinIO data
+minio_data/
+
+# PostgreSQL data
+postgres/data/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# =============================================================================
+# DOCUMENTAÇÃO E ESPECIFICAÇÕES (não versionar)
+# =============================================================================
+# Arquivos de documentação do projeto
+QUICKSTART.md
+PASSO2_README.md
+PARTE1_IMPLEMENTACAO.md
+PARTE2_IMPLEMENTACAO.md
+ARQUITETURA.md
+CESAR-School_-AM-Especificação-de-Projeto.txt
+Movie_Recommender_System_Using_K-Means_Clustering_AND_K-Nearest_Neighbor.txt
+
+# PDFs de especificação e paper
+[CESAR School] - AM - Especificação de Projeto.pdf
+Movie_Recommender_System_Using_K-Means_Clustering_AND_K-Nearest_Neighbor.pdf
