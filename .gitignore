@@ -70,11 +70,33 @@ minio_data/
 # PostgreSQL data
 postgres/data/
 
+# JupyterLab data
+jupyterlab/.jupyter/
+.jupyter/
+
+# MLFlow data
+mlflow/mlruns/
+mlflow/mlartifacts/
+mlflow_data/
+
+# ThingsBoard data
+thingsboard_data/
+thingsboard_logs/
+
+# Trendz data
+trendz_data/
+
+# Docker volumes
+volumes/
+
 # Temporary files
 *.tmp
 *.bak
 *.swp
 *~
+
+# README auxiliar (manter apenas o principal)
+README_COMPLETO.md
 
 # =============================================================================
 # DOCUMENTAÇÃO E ESPECIFICAÇÕES (não versionar)

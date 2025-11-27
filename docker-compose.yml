@@ -70,12 +70,125 @@ services:
       - ml_network
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
+  # JupyterLab - Ambiente de Análise e Modelagem
+  jupyterlab:
+    build: ./jupyterlab
+    container_name: movielens_jupyterlab
+    ports:
+      - "8888:8888"
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: projeto_ml_admin
+      MINIO_SECRET_KEY: cavalo-nimbus-xbox
+      MINIO_BUCKET: movielens-data
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: movielens
+      POSTGRES_USER: ml_user
+      POSTGRES_PASSWORD: ml_password_2025
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: projeto_ml_admin
+      AWS_SECRET_ACCESS_KEY: cavalo-nimbus-xbox
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - ./notebooks:/workspace/notebooks
+      - ./reports:/workspace/reports
+      - ./archive:/workspace/data/archive:ro
+      - jupyterlab_data:/workspace/.jupyter
+    depends_on:
+      - postgres
+      - minio
+      - mlflow
+    networks:
+      - ml_network
+
+  # MLFlow - Tracking de Experimentos e Modelos
+  mlflow:
+    build: ./mlflow
+    container_name: movielens_mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: movielens
+      POSTGRES_USER: ml_user
+      POSTGRES_PASSWORD: ml_password_2025
+      MLFLOW_S3_BUCKET: mlflow-artifacts
+      AWS_ACCESS_KEY_ID: projeto_ml_admin
+      AWS_SECRET_ACCESS_KEY: cavalo-nimbus-xbox
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - mlflow_data:/mlflow
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - ml_network
+
+  # ThingsBoard - Plataforma de Visualização IoT
+  thingsboard:
+    image: thingsboard/tb-postgres:3.6.2
+    container_name: movielens_thingsboard
+    ports:
+      - "8080:9090"  # UI Web
+      - "1883:1883"  # MQTT
+      - "5683:5683"  # CoAP
+    environment:
+      TB_QUEUE_TYPE: in-memory
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/thingsboard
+      SPRING_DATASOURCE_USERNAME: ml_user
+      SPRING_DATASOURCE_PASSWORD: ml_password_2025
+    volumes:
+      - thingsboard_data:/data
+      - thingsboard_logs:/var/log/thingsboard
+    depends_on:
+      - postgres
+    networks:
+      - ml_network
+    restart: unless-stopped
+
+  # Trendz Analytics - Dashboard e Analytics Avançado
+  trendz:
+    image: thingsboard/trendz:1.10.3
+    container_name: movielens_trendz
+    ports:
+      - "8889:8888"  # Porta alterada para evitar conflito com JupyterLab
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/trendz
+      SPRING_DATASOURCE_USERNAME: ml_user
+      SPRING_DATASOURCE_PASSWORD: ml_password_2025
+      TB_API_URL: http://thingsboard:9090
+    volumes:
+      - trendz_data:/data
+    depends_on:
+      - postgres
+      - thingsboard
+    networks:
+      - ml_network
+    restart: unless-stopped
+
 volumes:
   minio_data:
     name: movielens_minio_data
     driver: local
   postgres_data:
     name: movielens_postgres_data
+    driver: local
+  jupyterlab_data:
+    name: movielens_jupyterlab_data
+    driver: local
+  mlflow_data:
+    name: movielens_mlflow_data
+    driver: local
+  thingsboard_data:
+    name: movielens_thingsboard_data
+    driver: local
+  thingsboard_logs:
+    name: movielens_thingsboard_logs
+    driver: local
+  trendz_data:
+    name: movielens_trendz_data
     driver: local
 
 networks:

@@ -255,6 +255,94 @@ INSERT INTO db_metadata (event, description)
 VALUES ('schema_initialized', 'Database schema created successfully for MovieLens recommendation system');
 
 -- ====================================================================
+-- DATABASES PARA THINGSBOARD E TRENDZ
+-- ====================================================================
+
+-- Criar databases separados para ThingsBoard e Trendz
+CREATE DATABASE thingsboard;
+CREATE DATABASE trendz;
+
+-- Conceder permissões ao usuário ml_user
+GRANT ALL PRIVILEGES ON DATABASE thingsboard TO ml_user;
+GRANT ALL PRIVILEGES ON DATABASE trendz TO ml_user;
+
+-- ====================================================================
+-- TABELA: model_metrics (para dashboards)
+-- ====================================================================
+-- Armazena métricas dos modelos para visualização
+CREATE TABLE IF NOT EXISTS model_metrics (
+    metric_id SERIAL PRIMARY KEY,
+    model_name VARCHAR(100) NOT NULL,
+    model_version VARCHAR(50) NOT NULL,
+    metric_name VARCHAR(100) NOT NULL,  -- 'RMSE', 'MAE', 'Precision', 'Recall', etc.
+    metric_value FLOAT NOT NULL,
+    dataset_type VARCHAR(50),  -- 'train', 'test', 'validation'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    experiment_id VARCHAR(100),  -- MLFlow experiment ID
+    run_id VARCHAR(100),  -- MLFlow run ID
+    UNIQUE(model_version, metric_name, dataset_type)
+);
+
+-- Índices
+CREATE INDEX idx_model_metrics_name ON model_metrics(model_name);
+CREATE INDEX idx_model_metrics_version ON model_metrics(model_version);
+CREATE INDEX idx_model_metrics_created_at ON model_metrics(created_at DESC);
+
+-- ====================================================================
+-- TABELA: prediction_history (para dashboards de predições)
+-- ====================================================================
+-- Histórico de predições para análise temporal
+CREATE TABLE IF NOT EXISTS prediction_history (
+    prediction_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id),
+    movie_id INTEGER NOT NULL REFERENCES movies(movie_id),
+    predicted_rating FLOAT NOT NULL,
+    actual_rating INTEGER,  -- NULL se ainda não avaliado
+    prediction_error FLOAT,  -- |predicted - actual|
+    model_version VARCHAR(50) NOT NULL,
+    predicted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices
+CREATE INDEX idx_prediction_history_user ON prediction_history(user_id);
+CREATE INDEX idx_prediction_history_movie ON prediction_history(movie_id);
+CREATE INDEX idx_prediction_history_date ON prediction_history(predicted_at DESC);
+
+-- View: Métricas agregadas por modelo
+CREATE OR REPLACE VIEW model_performance_summary AS
+SELECT 
+    model_name,
+    model_version,
+    dataset_type,
+    MAX(CASE WHEN metric_name = 'RMSE' THEN metric_value END) as rmse,
+    MAX(CASE WHEN metric_name = 'MAE' THEN metric_value END) as mae,
+    MAX(CASE WHEN metric_name = 'R2' THEN metric_value END) as r2_score,
+    MAX(CASE WHEN metric_name = 'Precision' THEN metric_value END) as precision,
+    MAX(CASE WHEN metric_name = 'Recall' THEN metric_value END) as recall,
+    MAX(created_at) as last_updated
+FROM model_metrics
+GROUP BY model_name, model_version, dataset_type;
+
+-- View: Análise de erros de predição
+CREATE OR REPLACE VIEW prediction_error_analysis AS
+SELECT 
+    model_version,
+    COUNT(*) as total_predictions,
+    AVG(prediction_error) as avg_error,
+    STDDEV(prediction_error) as stddev_error,
+    MIN(prediction_error) as min_error,
+    MAX(prediction_error) as max_error,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY prediction_error) as median_error,
+    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY prediction_error) as p95_error
+FROM prediction_history
+WHERE actual_rating IS NOT NULL
+GROUP BY model_version;
+
+-- Comentários
+COMMENT ON TABLE model_metrics IS 'Métricas de performance dos modelos de ML';
+COMMENT ON TABLE prediction_history IS 'Histórico de predições para análise e dashboards';
+
+-- ====================================================================
 -- FINALIZAÇÃ
 -- ====================================================================
 
