@@ -1,10 +1,10 @@
-version: "3.8"
+# Docker Compose removido a versão (obsoleta no Docker Compose v2)
 
 services:
   # MinIO - Armazenamento de objetos (compatível com S3)
   minio:
     image: minio/minio:latest
-    container_name: minio
+    container_name: movielens_minio
     ports:
       - "9000:9000" # API do MinIO
       - "9001:9001" # Console Web do MinIO
@@ -25,7 +25,7 @@ services:
   # PostgreSQL - Banco de Dados Relacional
   postgres:
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: movielens_postgres
     ports:
       - "5432:5432"
     environment:
@@ -47,7 +47,7 @@ services:
   # FastAPI - API de Ingestão de Dados
   fastapi:
     build: ./fastapi
-    container_name: fastapi
+    container_name: movielens_fastapi
     ports:
       - "8000:8000"
     environment:
@@ -72,10 +72,13 @@ services:
 
 volumes:
   minio_data:
+    name: movielens_minio_data
     driver: local
   postgres_data:
+    name: movielens_postgres_data
     driver: local
 
 networks:
   ml_network:
+    name: movielens_network
     driver: bridge

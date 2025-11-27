@@ -77,7 +77,8 @@ CREATE TABLE IF NOT EXISTS ratings (
     rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
     timestamp BIGINT NOT NULL,
     rated_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_ratings_user_movie UNIQUE (user_id, movie_id)
 );
 
 -- Índices compostos para otimizar queries de recomendação

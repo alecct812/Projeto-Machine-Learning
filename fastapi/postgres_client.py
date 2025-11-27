@@ -271,6 +271,55 @@ class PostgreSQLClient:
             if conn:
                 self.return_connection(conn)
     
+    def insert_ratings_batch(self, ratings_data: List[Dict]) -> int:
+        """
+        Insere múltiplas avaliações em batch (muito mais rápido)
+        
+        Args:
+            ratings_data: Lista de dicionários com dados das avaliações
+            
+        Returns:
+            Número de avaliações inseridas
+        """
+        if not ratings_data:
+            return 0
+            
+        query = """
+        INSERT INTO ratings (user_id, movie_id, rating, timestamp, rated_at)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (user_id, movie_id) DO NOTHING
+        """
+        
+        conn = None
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Preparar dados como tuplas
+            values = [
+                (r['user_id'], r['movie_id'], r['rating'], r['timestamp'], r['rated_at'])
+                for r in ratings_data
+            ]
+            
+            # Executar em batch
+            from psycopg2.extras import execute_batch
+            execute_batch(cursor, query, values, page_size=1000)
+            
+            # execute_batch não retorna rowcount confiável, então retornamos o tamanho do batch
+            inserted_count = len(values)
+            conn.commit()
+            cursor.close()
+            logger.info(f"{inserted_count} ratings inseridos em batch")
+            return inserted_count
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            logger.error(f"Erro ao inserir ratings em batch: {e}")
+            raise
+        finally:
+            if conn:
+                self.return_connection(conn)
+    
     def insert_rating(self, rating_data: Dict) -> int:
         """
         Insere uma avaliação no banco
@@ -284,6 +333,7 @@ class PostgreSQLClient:
         query = """
         INSERT INTO ratings (user_id, movie_id, rating, timestamp, rated_at)
         VALUES (%(user_id)s, %(movie_id)s, %(rating)s, %(timestamp)s, %(rated_at)s)
+        ON CONFLICT (user_id, movie_id) DO NOTHING
         RETURNING rating_id
         """
         conn = None

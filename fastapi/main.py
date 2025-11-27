@@ -18,17 +18,48 @@ from minio_client import MinIOClient
 from postgres_client import PostgreSQLClient
 from etl_minio_postgres import MovieLensETL
 
-# Inicializar FastAPI
-app = FastAPI(
-    title="MovieLens Data Ingestion API",
-    description="API para ingestão de dados do dataset MovieLens no MinIO/S3 e PostgreSQL",
-    version="2.0.0"
-)
+from contextlib import asynccontextmanager
 
 # Inicializar clientes
 minio_client = MinIOClient()
 pg_client = None  # Será inicializado no startup
 
+def get_pg_client():
+    """
+    Retorna o cliente PostgreSQL, tentando inicializar se necessário
+    """
+    global pg_client
+    if pg_client is None:
+        try:
+            pg_client = PostgreSQLClient()
+            if not pg_client.check_connection():
+                print(f"⚠️ Tentativa de conexão PostgreSQL falhou")
+                pg_client = None
+            else:
+                print(f"✅ Conexão PostgreSQL restabelecida com sucesso!")
+        except Exception as e:
+            print(f"⚠️ Erro ao reconectar PostgreSQL: {e}")
+            pg_client = None
+    
+    return pg_client
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Inicializa o bucket do MinIO e conexão PostgreSQL na inicialização da aplicação"""
+    global pg_client
+    
+    # MinIO
+    minio_client.create_bucket_if_not_exists()
+    print(f"✅ Bucket '{minio_client.bucket_name}' verificado/criado com sucesso!")
+    
+    # PostgreSQL - tentar conectar, mas não falhar se o banco não estiver pronto
+    get_pg_client()
+    
+    yield
+    
+    # Clean up (se necessário)
+    if pg_client:
+        pg_client.close()
 
 # Modelos Pydantic
 class HealthResponse(BaseModel):
@@ -54,25 +85,13 @@ class UploadResponse(BaseModel):
     object_key: str
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Inicializa o bucket do MinIO e conexão PostgreSQL na inicialização da aplicação"""
-    global pg_client
-    
-    # MinIO
-    minio_client.create_bucket_if_not_exists()
-    print(f"✅ Bucket '{minio_client.bucket_name}' verificado/criado com sucesso!")
-    
-    # PostgreSQL
-    try:
-        pg_client = PostgreSQLClient()
-        if pg_client.check_connection():
-            print(f"✅ PostgreSQL conectado com sucesso!")
-        else:
-            print(f"⚠️ PostgreSQL não está acessível")
-    except Exception as e:
-        print(f"⚠️ Erro ao conectar PostgreSQL: {e}")
-        pg_client = None
+# Inicializar FastAPI
+app = FastAPI(
+    title="MovieLens Data Ingestion API",
+    description="API para ingestão de dados do dataset MovieLens no MinIO/S3 e PostgreSQL",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 
 @app.get("/", tags=["Root"])
@@ -342,13 +361,15 @@ async def ingest_movielens_dataset():
 @app.get("/postgres/health", tags=["PostgreSQL"])
 async def postgres_health():
     """Verifica conexão com PostgreSQL"""
-    if not pg_client:
+    client = get_pg_client()
+    
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cliente PostgreSQL não inicializado"
         )
     
-    connected = pg_client.check_connection()
+    connected = client.check_connection()
     
     return {
         "postgres_connected": connected,
@@ -360,15 +381,17 @@ async def postgres_health():
 @app.get("/postgres/tables", tags=["PostgreSQL"])
 async def get_postgres_tables():
     """Lista todas as tabelas do banco de dados"""
-    if not pg_client:
+    client = get_pg_client()
+    
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cliente PostgreSQL não inicializado"
         )
     
     try:
-        tables = pg_client.get_tables()
-        table_info = pg_client.get_table_info()
+        tables = client.get_tables()
+        table_info = client.get_table_info()
         
         return {
             "total_tables": len(tables),
@@ -385,14 +408,16 @@ async def get_postgres_tables():
 @app.get("/postgres/summary", tags=["PostgreSQL"])
 async def get_database_summary():
     """Retorna sumário completo do banco de dados"""
-    if not pg_client:
+    client = get_pg_client()
+    
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cliente PostgreSQL não inicializado"
         )
     
     try:
-        table_info = pg_client.get_table_info()
+        table_info = client.get_table_info()
         
         return {
             "database": "movielens",
@@ -424,7 +449,9 @@ async def run_etl_pipeline():
     2. Transforma os dados para o formato do banco
     3. Carrega no PostgreSQL (movies, users, ratings)
     """
-    if not pg_client:
+    client = get_pg_client()
+    
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cliente PostgreSQL não inicializado"
@@ -458,7 +485,9 @@ async def run_etl_pipeline():
 @app.get("/postgres/stats/movies", tags=["Statistics"])
 async def get_movie_statistics():
     """Retorna estatísticas sobre filmes"""
-    if not pg_client:
+    client = get_pg_client()
+    
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cliente PostgreSQL não inicializado"
@@ -466,7 +495,7 @@ async def get_movie_statistics():
     
     try:
         query = "SELECT * FROM movie_stats LIMIT 20"
-        results = pg_client.execute_query(query)
+        results = client.execute_query(query)
         
         return {
             "total_results": len(results),
@@ -482,7 +511,9 @@ async def get_movie_statistics():
 @app.get("/postgres/stats/users", tags=["Statistics"])
 async def get_user_statistics():
     """Retorna estatísticas sobre usuários"""
-    if not pg_client:
+    client = get_pg_client()
+    
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cliente PostgreSQL não inicializado"
@@ -490,7 +521,7 @@ async def get_user_statistics():
     
     try:
         query = "SELECT * FROM user_stats LIMIT 20"
-        results = pg_client.execute_query(query)
+        results = client.execute_query(query)
         
         return {
             "total_results": len(results),
@@ -506,7 +537,9 @@ async def get_user_statistics():
 @app.get("/postgres/top-movies", tags=["Statistics"])
 async def get_top_movies(limit: int = 10):
     """Retorna os filmes mais bem avaliados"""
-    if not pg_client:
+    client = get_pg_client()
+    
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cliente PostgreSQL não inicializado"
@@ -514,7 +547,7 @@ async def get_top_movies(limit: int = 10):
     
     try:
         query = f"SELECT * FROM top_movies LIMIT {limit}"
-        results = pg_client.execute_query(query)
+        results = client.execute_query(query)
         
         return {
             "total_results": len(results),

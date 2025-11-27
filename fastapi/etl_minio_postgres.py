@@ -237,24 +237,23 @@ class MovieLensETL:
                     
                     ratings_data.append(rating_data)
             
-            # Inserir em batches
+            # Inserir em batches (usando o novo método batch)
             total_ratings = len(ratings_data)
-            logger.info(f"Inserindo {total_ratings} avaliações no PostgreSQL...")
+            logger.info(f"Inserindo {total_ratings} avaliações no PostgreSQL em batches...")
             
             inserted = 0
             for i in range(0, total_ratings, batch_size):
                 batch = ratings_data[i:i + batch_size]
-                for rating in batch:
-                    try:
-                        self.pg_client.insert_rating(rating)
-                        inserted += 1
-                    except Exception as e:
-                        logger.error(f"Erro ao inserir rating: {e}")
-                        self.stats["errors"] += 1
+                try:
+                    batch_inserted = self.pg_client.insert_ratings_batch(batch)
+                    inserted += batch_inserted
+                except Exception as e:
+                    logger.error(f"Erro ao inserir batch: {e}")
+                    self.stats["errors"] += 1
                 
                 # Log de progresso
-                if (i + batch_size) % (batch_size * 10) == 0:
-                    logger.info(f"Progresso: {min(i + batch_size, total_ratings)}/{total_ratings} ratings inseridos")
+                if (i + batch_size) % (batch_size * 10) == 0 or (i + batch_size) >= total_ratings:
+                    logger.info(f"Progresso: {min(i + batch_size, total_ratings)}/{total_ratings} ratings processados")
             
             self.stats["ratings_inserted"] = inserted
             logger.info(f"✓ {inserted} avaliações inseridas com sucesso")
