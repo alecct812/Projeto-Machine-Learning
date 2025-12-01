@@ -16,8 +16,9 @@ scipy>=1.11.0
 # Banco de dados
 psycopg2-binary>=2.9.0
 
-# MLOps
-mlflow>=2.8.0
+# MLOps - Rastreamento de Experimentos
+mlflow>=2.9.0
+boto3>=1.29.0  # Para integração MLflow com MinIO (S3)
 
 # Jupyter (VS Code)
 ipykernel>=6.25.0

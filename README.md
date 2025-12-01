@@ -197,10 +197,9 @@ Para acessar o dashboard:
 | Serviço               | URL                        | Credenciais                                                              |
 | --------------------- | -------------------------- | ------------------------------------------------------------------------ |
 | **FastAPI (Swagger)** | http://localhost:8000/docs | -                                                                        |
-| **MinIO Console**     | http://localhost:9001      | User: `minioadmin`<br>Password: `minioadmin123`                          |
-| **PostgreSQL**        | `localhost:5432`           | User: `ml_user`<br>Password: `ml_password_2025`<br>Database: `movielens` |
-| **JupyterLab**        | http://localhost:8888      | Password: `ml_password_2025`                                             |
-| **MLFlow**            | http://localhost:5000      | -                                                                        |
+| **MinIO Console**     | http://localhost:9001      | User: `projeto_ml_admin`<br>Password: `cavalo-nimbus-xbox`                          |
+| **PostgreSQL**        | `localhost:5438`           | User: `ml_user`<br>Password: `ml_password_2025`<br>Database: `movielens` |
+| **MLFlow UI**         | http://localhost:5000      | - (Rastreamento de experimentos)                                         |
 
 ---
 
@@ -470,11 +469,77 @@ chmod -R 755 archive/
 
 ---
 
+## 🔬 MLflow - Rastreamento de Experimentos
+
+### O que é MLflow?
+
+MLflow é uma plataforma open-source para gerenciar o ciclo de vida completo de Machine Learning, incluindo:
+- **Tracking:** Registro de parâmetros, métricas e artifacts
+- **Models:** Versionamento e deployment de modelos
+- **Projects:** Reprodutibilidade de experimentos
+
+### Como usar no projeto
+
+1. **Iniciar serviços:**
+```powershell
+docker-compose up -d
+```
+
+2. **Configurar bucket MLflow (primeira vez):**
+```powershell
+python setup_mlflow.py
+```
+
+3. **Acessar interface:**
+- MLflow UI: http://localhost:5000
+
+4. **No notebook Jupyter:**
+```python
+import mlflow
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("MovieLens_Recommender")
+
+with mlflow.start_run(run_name="meu_experimento"):
+    mlflow.log_param("k_clusters", 5)
+    mlflow.log_metric("rmse", 1.23)
+    mlflow.sklearn.log_model(model, "kmeans_model")
+```
+
+5. **Consultar experimentos:**
+```python
+# Ver todos os runs
+runs = mlflow.search_runs()
+
+# Carregar modelo salvo
+model = mlflow.sklearn.load_model("runs:/<run_id>/model")
+```
+
+### Arquivos relacionados ao MLflow
+
+- `mlflow_config.py` - Módulo de configuração
+- `mlflow_example.py` - Script de exemplo completo
+- `setup_mlflow.py` - Script de inicialização do bucket MinIO
+- `MLFLOW_GUIDE.md` - Guia detalhado de uso
+
+### Arquitetura do MLflow
+
+```
+MLflow Tracking Server (http://localhost:5000)
+├── Backend Store: PostgreSQL (metadata)
+├── Artifact Store: MinIO S3 (modelos e arquivos)
+└── UI: Interface web para visualização
+```
+
+Para mais detalhes, consulte: **[MLFLOW_GUIDE.md](MLFLOW_GUIDE.md)**
+
+---
+
 ## 📝 Próximas Etapas
 
-- [ ] **Parte 2:** Estruturação de dados no Snowflake
-- [ ] **Parte 3:** Análise exploratória e modelagem (Jupyter + MLFlow)
-- [ ] **Parte 4:** Implementação dos algoritmos (K-Means + KNN)
+- [x] **Parte 1:** Ingestão de dados (FastAPI + MinIO) ✅
+- [x] **Parte 2:** ETL MinIO → PostgreSQL ✅
+- [x] **Parte 3:** Análise exploratória e modelagem ✅
+- [x] **Parte 4:** MLflow - Rastreamento de experimentos ✅
 - [ ] **Parte 5:** Dashboard e visualização (ThingsBoard/Trendz)
 
 ---

@@ -27,7 +27,7 @@ services:
     image: postgres:15-alpine
     container_name: movielens_postgres
     ports:
-      - "5432:5432"
+      - "5438:5432"
     environment:
       POSTGRES_DB: movielens
       POSTGRES_USER: ml_user
@@ -70,12 +70,47 @@ services:
       - ml_network
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
+  # MLflow - Rastreamento de Experimentos
+  mlflow:
+    build: ./mlflow
+    container_name: movielens_mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      # Backend Store (PostgreSQL) - Armazena metadata dos experimentos
+      MLFLOW_BACKEND_STORE_URI: postgresql://ml_user:ml_password_2025@postgres:5432/movielens
+      # Artifact Store (MinIO S3) - Armazena modelos e artifacts
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: projeto_ml_admin
+      AWS_SECRET_ACCESS_KEY: cavalo-nimbus-xbox
+      MLFLOW_ARTIFACT_ROOT: s3://mlflow-artifacts
+    volumes:
+      - mlflow_data:/mlflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - ml_network
+    restart: unless-stopped
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://ml_user:ml_password_2025@postgres:5432/movielens
+      --default-artifact-root s3://mlflow-artifacts/
+      --serve-artifacts
+      --host 0.0.0.0
+      --port 5000
+
 volumes:
   minio_data:
     name: movielens_minio_data
     driver: local
   postgres_data:
     name: movielens_postgres_data
+    driver: local
+  mlflow_data:
+    name: movielens_mlflow_data
     driver: local
 
 networks:
