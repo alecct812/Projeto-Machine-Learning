@@ -5,6 +5,10 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+> **⚡ Quer começar rápido?** Veja o [**QUICKSTART.md**](QUICKSTART.md) - Setup completo em 15 minutos!
+
+---
+
 ## 📚 Informações Acadêmicas
 
 **Disciplina:** Aprendizado de Máquina - 2025.2  
@@ -29,10 +33,12 @@ O pipeline completo integra as seguintes tecnologias em uma arquitetura de micro
 
 ```
 ┌─────────────┐    ┌─────────┐    ┌──────────────┐    ┌─────────┐    ┌────────────────┐
-│   FastAPI   │───▶│  MinIO  │───▶│  Snowflake   │───▶│ MLFlow  │───▶│  ThingsBoard   │
-│  (Ingestão) │    │  (S3)   │    │ (Estrutura)  │    │(Tracking)│   │(Visualização)  │
+│   FastAPI   │───▶│  MinIO  │───▶│  PostgreSQL  │───▶│ MLFlow  │───▶│  ThingsBoard   │
+│  (Ingestão) │    │  (S3)   │    │(Estruturação)│    │(Tracking)│   │  (Dashboards)  │
 └─────────────┘    └─────────┘    └──────────────┘    └─────────┘    └────────────────┘
 ```
+
+> **📝 Nota sobre Snowflake:** Este projeto utiliza **PostgreSQL** para estruturação de dados em substituição ao Snowflake. PostgreSQL oferece funcionalidades robustas de banco de dados relacional, é open-source, e se integra perfeitamente com nossa stack Docker. Para projetos acadêmicos e MVPs, PostgreSQL é uma alternativa mais acessível e igualmente poderosa ao Snowflake, mantendo todas as capacidades de análise e modelagem necessárias.
 
 ### Dataset
 
@@ -180,26 +186,98 @@ curl -X POST http://localhost:8000/etl/run
 2. Navegue pelos experimentos registrados
 3. Compare métricas entre diferentes modelos
 
-### Passo 9: Visualizar Dashboard (Trendz/ThingsBoard)
+### Passo 9: Configurar e Visualizar Dashboards (ThingsBoard)
 
-> **Nota:** Esta etapa será configurada na Parte 5 do projeto.
+#### 🚀 Setup Semi-Automático (7 minutos)
 
-Para acessar o dashboard:
+**Passo 1: Executar script de automação**
 
-1. Acesse: http://localhost:9090 (ou porta configurada)
-2. Importe o dashboard exportado da pasta `trendz/`
-3. Visualize as métricas em tempo real
+**Windows (PowerShell):**
+```powershell
+.\setup_auto.ps1
+```
+
+**Linux/Mac (Bash):**
+```bash
+chmod +x setup_auto.sh
+./setup_auto.sh
+```
+
+O script irá:
+- ✅ Criar dashboard no ThingsBoard
+- ✅ Sincronizar 22 dispositivos com dados
+- ✅ Iniciar sincronização contínua (5 minutos)
+- ✅ Exibir URL do dashboard
+
+**Passo 2: Adicionar 5 widgets manualmente (5 minutos)**
+
+Siga o guia detalhado: **[trendz/THINGSBOARD_DASHBOARDS.md](trendz/THINGSBOARD_DASHBOARDS.md)**
+
+**Widgets:**
+- 4 Simple Cards (Usuários, Filmes, Avaliações, Média)
+- 1 Entities Table (Top 10 Filmes)
+
+> **💡 Por quê semi-automático?** A API REST do ThingsBoard tem limitações técnicas para criar widgets programaticamente. A estrutura JSON é complexa e varia entre versões.
+
+#### 📝 Alternativa: Setup 100% Manual
+
+**O que o script faz:**
+- ✅ Aguarda ThingsBoard ficar pronto
+- ✅ Sincroniza dados do PostgreSQL
+- ✅ **Cria dashboard automaticamente via API** com todos os widgets
+- ✅ Inicia sincronização contínua (5 minutos)
+- ✅ Retorna URL direta do dashboard criado
+
+**Pronto!** Acesse a URL fornecida e o dashboard estará 100% configurado! 🎉
+
+---
+
+#### 🔧 Opção Manual (se preferir)
+
+**9.1 Sincronizar Dados**
+```bash
+curl -X POST http://localhost:8000/thingsboard/sync
+```
+
+**9.2 Criar Dashboard via API**
+```bash
+curl -X POST http://localhost:8000/thingsboard/create-dashboard
+```
+
+**9.3 Ou Criar Manualmente**
+
+Siga o guia completo em: **[`trendz/THINGSBOARD_DASHBOARDS.md`](trendz/THINGSBOARD_DASHBOARDS.md)**
+
+#### 9.3 Criar Dashboards no ThingsBoard
+
+O ThingsBoard possui um **sistema de dashboards nativo e gratuito**!
+
+1. No ThingsBoard, clique em **"Dashboards"**
+2. Clique em **"+"** → **"Add new dashboard"**
+3. Adicione widgets para visualizar:
+   - Total de usuários, filmes e ratings
+   - Top filmes mais bem avaliados
+   - Métricas do modelo de ML
+   - Gráficos e tabelas interativas
+
+📚 **Guia Completo:** Veja `trendz/THINGSBOARD_DASHBOARDS.md` para tutorial passo a passo
+
+> **📝 Nota sobre Trendz:** Trendz Analytics é uma ferramenta **comercial** que requer licença paga. Por isso, usamos os **dashboards nativos do ThingsBoard** que são totalmente gratuitos e open source.
 
 ---
 
 ## 🔗 Acessos aos Serviços
 
-| Serviço               | URL                        | Credenciais                                                              |
-| --------------------- | -------------------------- | ------------------------------------------------------------------------ |
-| **FastAPI (Swagger)** | http://localhost:8000/docs | -                                                                        |
-| **MinIO Console**     | http://localhost:9001      | User: `projeto_ml_admin`<br>Password: `cavalo-nimbus-xbox`                          |
-| **PostgreSQL**        | `localhost:5438`           | User: `ml_user`<br>Password: `ml_password_2025`<br>Database: `movielens` |
-| **MLFlow UI**         | http://localhost:5000      | - (Rastreamento de experimentos)                                         |
+| Serviço                   | URL                        | Credenciais                                                              |
+| ------------------------- | -------------------------- | ------------------------------------------------------------------------ |
+| **FastAPI (Swagger)**     | http://localhost:8000/docs | -                                                                        |
+| **MinIO Console**         | http://localhost:9001      | User: `projeto_ml_admin`<br>Password: `cavalo-nimbus-xbox`              |
+| **PostgreSQL**            | `localhost:5438`           | User: `ml_user`<br>Password: `ml_password_2025`<br>Database: `movielens` |
+| **MLFlow UI**             | http://localhost:5000      | - (Rastreamento de experimentos)                                         |
+| **ThingsBoard**           | http://localhost:9090      | User: `tenant@thingsboard.org`<br>Password: `tenant`                     |
+| **JupyterLab** (local)    | http://localhost:8888      | Token no terminal ao iniciar                                             |
+
+> **📝 Nota:** Trendz Analytics não está incluído (requer licença comercial). Use os dashboards nativos do ThingsBoard!
 
 ---
 
@@ -234,7 +312,7 @@ curl -X POST http://localhost:8000/etl/run
 
 ---
 
-## 📊 Visualizar o Dashboard
+## 📊 Visualizar os Dashboards
 
 ### Opção 1: Plots Estáticos (reports/)
 
@@ -250,16 +328,22 @@ reports/
 └── comparison_table.png           # Comparação entre modelos
 ```
 
-### Opção 2: Dashboard Interativo (ThingsBoard/Trendz)
+### Opção 2: Dashboard Interativo (ThingsBoard + Trendz) ✅
 
-> **Status:** Em desenvolvimento (Parte 5)
+**Dashboard Principal incluí:**
+- 📊 KPIs: Total de Usuários, Filmes, Avaliações
+- 📈 Distribuição de Usuários por Cluster
+- 🎬 Top 10 Filmes Mais Bem Avaliados
+- 🔬 Métricas do Modelo ML em tempo real
+- ⭐ Média de Ratings e Tendências
 
-1. Acesse o dashboard configurado
-2. Visualize métricas em tempo real:
-   - RMSE por modelo
-   - Precision@K e Recall@K
-   - Distribuição de erros
-   - Top filmes recomendados
+**Como usar:**
+1. Acesse ThingsBoard: http://localhost:9090
+2. Acesse Trendz Analytics: http://localhost:8888
+3. Sincronize dados: `curl -X POST http://localhost:8000/thingsboard/sync`
+4. Importe dashboards da pasta `trendz/`
+
+📚 **Guia Completo:** `trendz/QUICKSTART.md`
 
 ---
 
@@ -267,34 +351,128 @@ reports/
 
 ```
 projeto/
-├── docker-compose.yml          # Orquestração dos contêineres
-├── README.md                   # Descrição do projeto
+├── docker-compose.yml          # Orquestração de todos os contêineres
+├── README.md                   # Documentação principal do projeto
 ├── LICENSE                     # Licença MIT
+├── requirements.txt            # Dependências Python globais
 │
-├── fastapi/                    # Camada de ingestão (API)
+├── archive/                    # Dataset MovieLens 100K
+│   └── ml-100k/                # Dados brutos do dataset
+│
+├── fastapi/                    # 📡 API de Ingestão de Dados
 │   ├── Dockerfile
-│   ├── main.py                 # Aplicação FastAPI
+│   ├── main.py                 # Aplicação FastAPI principal
 │   ├── minio_client.py         # Cliente MinIO/S3
 │   ├── postgres_client.py      # Cliente PostgreSQL
 │   ├── etl_minio_postgres.py   # ETL MinIO → PostgreSQL
+│   ├── thingsboard_client.py   # Cliente ThingsBoard API
+│   ├── sync_thingsboard.py     # Sincronização PostgreSQL → ThingsBoard
 │   ├── load_data.py            # Script de carga inicial
 │   └── requirements.txt
 │
-├── jupyterlab/                 # Ambiente de análise e exploração
+├── postgres/                   # 🗄️ Configuração PostgreSQL
+│   └── init.sql                # Schema e estruturas iniciais
+│
+├── mlflow/                     # 🔬 MLflow - Tracking de Experimentos
 │   ├── Dockerfile
-│   └── (configurações)
+│   └── (artifacts e configurações)
 │
-├── mlflow/                     # Configuração e armazenamento de experimentos
-│   └── (tracking de modelos)
+├── notebooks/                  # 📓 Jupyter Notebooks
+│   ├── parte3_analise_modelagem.ipynb  # Análise, EDA e Modelagem
+│   └── (outros notebooks de exploração)
 │
-├── notebooks/                  # Notebooks de tratamento, visualização e modelagem
-│   ├── parte3_analise_modelagem.ipynb
-│   └── (outros notebooks)
+├── trendz/                     # 📊 Dashboards e Visualizações
+│   ├── README.md               # Documentação dos dashboards
+│   ├── QUICKSTART.md           # Guia rápido de configuração
+│   └── dashboard_movielens_overview.json  # Dashboard principal
 │
-├── trendz/                     # Dashboards exportados
-│   └── (configurações de visualização)
-│
-└── reports/                    # Figuras com os plots dos resultados
+└── reports/                    # 📈 Gráficos e Relatórios Estáticos
+    └── (plots gerados pelos notebooks)
+```
+
+### 🏗️ Arquitetura dos Serviços
+
+| Serviço          | Porta  | Função                                           |
+| ---------------- | ------ | ------------------------------------------------ |
+| FastAPI          | 8000   | API de ingestão e endpoints de integração        |
+| MinIO            | 9000/9001 | Armazenamento S3 (dados + modelos)            |
+| PostgreSQL       | 5438   | Banco relacional estruturado                     |
+| MLflow           | 5000   | Tracking de experimentos ML                      |
+| ThingsBoard      | 9090   | Plataforma IoT, dashboards e visualizações       |
+| JupyterLab       | 8888   | Notebooks Python (local/independente)            |
+
+---
+
+## 🔄 Fluxo de Dados Completo
+
+```mermaid
+graph LR
+    A[Dataset CSV] --> B[FastAPI]
+    B --> C[MinIO S3]
+    C --> D[PostgreSQL]
+    D --> E[Jupyter Notebook]
+    E --> F[MLflow]
+    E --> D
+    D --> G[ThingsBoard]
+    G --> H[Trendz Analytics]
+    F --> C
+```
+
+1. **Ingestão:** Dataset → FastAPI → MinIO (S3)
+2. **ETL:** MinIO → PostgreSQL (estruturação)
+3. **Análise:** PostgreSQL → Jupyter (EDA + Modelagem)
+4. **Tracking:** Modelos → MLflow → MinIO (artifacts)
+5. **Visualização:** PostgreSQL → ThingsBoard → Trendz
+
+---
+
+## 🎯 Tecnologias Utilizadas
+
+### Backend & API
+- **FastAPI** - Framework web moderno e performático
+- **PostgreSQL** - Banco de dados relacional (substitui Snowflake)
+- **MinIO** - Armazenamento S3-compatible
+
+### Machine Learning
+- **Scikit-learn** - K-Means, KNN, métricas
+- **Pandas & NumPy** - Manipulação de dados
+- **MLflow** - Tracking de experimentos
+
+### Visualização & Dashboards
+- **ThingsBoard** - Plataforma IoT e visualização
+- **Trendz Analytics** - Business Intelligence
+- **Matplotlib & Seaborn** - Plots estáticos
+
+### DevOps
+- **Docker & Docker Compose** - Containerização
+- **Git & GitHub** - Controle de versão
+
+---
+
+## 📝 Justificativa: PostgreSQL vs Snowflake
+
+**Por que PostgreSQL ao invés de Snowflake?**
+
+✅ **Vantagens do PostgreSQL neste projeto:**
+
+1. **Open Source & Gratuito:** Ideal para projetos acadêmicos
+2. **Docker-Friendly:** Fácil integração na stack de containers
+3. **Recursos Suficientes:** Atende todas as necessidades de estruturação de dados
+4. **Performance Local:** Excelente para datasets de tamanho médio (100K registros)
+5. **Integração Nativa:** Suporte direto do MLflow, Pandas, SQLAlchemy
+6. **Aprendizado:** Amplamente usado na indústria
+
+🔷 **Quando usar Snowflake:**
+- Datasets muito grandes (> 10GB)
+- Necessidade de escalabilidade extrema
+- Orçamento disponível para licenciamento
+- Data Warehousing corporativo
+
+Para este projeto acadêmico, **PostgreSQL é a escolha ideal** mantendo todos os requisitos técnicos atendidos.
+
+---
+
+## 📚 Documentação Adicional
     └── (visualizações geradas)
 ```
 
@@ -534,20 +712,43 @@ Para mais detalhes, consulte: **[MLFLOW_GUIDE.md](MLFLOW_GUIDE.md)**
 
 ---
 
-## 📝 Próximas Etapas
+## 📝 Status do Projeto
 
 - [x] **Parte 1:** Ingestão de dados (FastAPI + MinIO) ✅
 - [x] **Parte 2:** ETL MinIO → PostgreSQL ✅
 - [x] **Parte 3:** Análise exploratória e modelagem ✅
 - [x] **Parte 4:** MLflow - Rastreamento de experimentos ✅
-- [ ] **Parte 5:** Dashboard e visualização (ThingsBoard/Trendz)
+- [x] **Parte 5:** Dashboard e visualização (ThingsBoard + Trendz) ✅
+
+### ✅ Requisitos Técnicos Atendidos
+
+| Requisito                      | Status | Implementação                    |
+| ------------------------------ | ------ | -------------------------------- |
+| FastAPI (Ingestão)             | ✅     | `/fastapi/main.py`               |
+| MinIO/S3 (Armazenamento)       | ✅     | Docker Compose + MinIO Client    |
+| PostgreSQL (Estruturação)*     | ✅     | Substitui Snowflake              |
+| Jupyter Notebook (Análise)     | ✅     | Local + `/notebooks/`            |
+| MLFlow (Tracking)              | ✅     | Docker Compose + Integração      |
+| ThingsBoard (Visualização)**   | ✅     | Dashboards nativos (gratuitos)   |
+| Docker Compose (Orquestração)  | ✅     | 6 serviços integrados            |
+
+*_PostgreSQL usado como alternativa ao Snowflake (veja justificativa na seção de Arquitetura)_  
+**_ThingsBoard com dashboards nativos (Trendz requer licença comercial)_
 
 ---
 
 ## 📚 Documentação Adicional
 
+### Guias do Projeto
+- 📊 **[trendz/THINGSBOARD_DASHBOARDS.md](trendz/THINGSBOARD_DASHBOARDS.md)** - Tutorial completo de dashboards
+- � **[trendz/README.md](trendz/README.md)** - Documentação geral
+- 🔬 **MLFLOW_GUIDE.md** - Guia detalhado MLflow (se disponível)
+
+### Recursos Externos
 - [FastAPI Docs](https://fastapi.tiangolo.com/)
-- [MinIO Docs](https://min.io/docs/minio/linux/index.html)
+- [MinIO Docs](https://min.io/docs/minio/linux/index.html/)
+- [ThingsBoard Docs](https://thingsboard.io/docs/)
+- [ThingsBoard Dashboards](https://thingsboard.io/docs/user-guide/dashboards/)
 - [MovieLens Dataset](https://grouplens.org/datasets/movielens/100k/)
 - [Paper Original](https://doi.org/10.1109/CONFLUENCE.2019.8776969)
 
@@ -582,5 +783,9 @@ Para dúvidas ou sugestões, abra uma [issue](https://github.com/seu-usuario/mov
 <div align="center">
 
 **Desenvolvido com ❤️ para a disciplina de Aprendizado de Máquina**
+
+[![GitHub Stars](https://img.shields.io/github/stars/seu-usuario/projeto-ml?style=social)](https://github.com/seu-usuario/projeto-ml)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://www.docker.com/)
+[![ThingsBoard](https://img.shields.io/badge/ThingsBoard-Integrated-orange)](https://thingsboard.io/)
 
 </div>

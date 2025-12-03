@@ -102,6 +102,45 @@ services:
       --host 0.0.0.0
       --port 5000
 
+  # ThingsBoard - Plataforma IoT e Visualização
+  thingsboard:
+    image: thingsboard/tb-postgres:3.6.2
+    container_name: movielens_thingsboard
+    ports:
+      - "9090:9090"   # HTTP UI
+      - "1883:1883"   # MQTT
+      - "7070:7070"   # Edge RPC
+      - "5683-5688:5683-5688/udp" # CoAP
+    environment:
+      TB_QUEUE_TYPE: in-memory
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/thingsboard
+      SPRING_DATASOURCE_USERNAME: ml_user
+      SPRING_DATASOURCE_PASSWORD: ml_password_2025
+      # Configurações de Log
+      LOGGER_LEVEL: INFO
+      # Limites de recursos
+      TB_QUEUE_CORE_POOL_SIZE: 25
+      TB_QUEUE_MAX_POOL_SIZE: 50
+    volumes:
+      - thingsboard_data:/data
+      - thingsboard_logs:/var/log/thingsboard
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ml_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9090/login || exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
+  # Nota: Trendz Analytics requer licença comercial
+  # Alternativa: Usar dashboards nativos do ThingsBoard (incluídos gratuitamente)
+  # Para visualizações: Acesse ThingsBoard → Dashboards
+
 volumes:
   minio_data:
     name: movielens_minio_data
@@ -111,6 +150,12 @@ volumes:
     driver: local
   mlflow_data:
     name: movielens_mlflow_data
+    driver: local
+  thingsboard_data:
+    name: movielens_thingsboard_data
+    driver: local
+  thingsboard_logs:
+    name: movielens_thingsboard_logs
     driver: local
 
 networks:

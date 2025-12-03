@@ -560,6 +560,118 @@ async def get_top_movies(limit: int = 10):
         )
 
 
+# ====================================================================
+# ENDPOINTS THINGSBOARD - INTEGRAÇÃO COM DASHBOARD
+# ====================================================================
+
+@app.post("/thingsboard/sync", tags=["ThingsBoard"])
+async def sync_to_thingsboard():
+    """
+    Sincroniza dados do PostgreSQL para ThingsBoard
+    Envia estatísticas, métricas de ML e dados de filmes
+    """
+    try:
+        from sync_thingsboard import PostgreSQLToThingsBoard
+        
+        etl = PostgreSQLToThingsBoard()
+        success = etl.send_all_data_to_thingsboard()
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Dados sincronizados com ThingsBoard com sucesso!",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro ao sincronizar dados com ThingsBoard"
+            )
+            
+    except ImportError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Módulo de integração ThingsBoard não encontrado: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao sincronizar com ThingsBoard: {str(e)}"
+        )
+
+
+@app.get("/thingsboard/status", tags=["ThingsBoard"])
+async def check_thingsboard_status():
+    """Verifica status da conexão com ThingsBoard"""
+    try:
+        from thingsboard_client import ThingsBoardClient
+        
+        tb_client = ThingsBoardClient()
+        connected = tb_client.login()
+        
+        return {
+            "thingsboard_connected": connected,
+            "url": tb_client.base_url,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "thingsboard_connected": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+@app.post("/thingsboard/create-dashboard", tags=["ThingsBoard"])
+async def create_thingsboard_dashboard():
+    """
+    Cria automaticamente o dashboard MovieLens Analytics no ThingsBoard
+    Inclui todos os widgets configurados (cards, tabelas, gráficos)
+    """
+    try:
+        from create_dashboard import DashboardCreator
+        
+        creator = DashboardCreator()
+        
+        # Login
+        if not creator.login():
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro ao fazer login no ThingsBoard"
+            )
+        
+        # Criar dashboard com widgets incluídos
+        dashboard = creator.create_dashboard()
+        
+        if not dashboard:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro ao criar dashboard"
+            )
+        
+        dashboard_id = dashboard.get("id", {}).get("id")
+        
+        return {
+            "status": "success",
+            "message": "Dashboard criado com sucesso!",
+            "dashboard_id": dashboard_id,
+            "dashboard_url": f"http://localhost:9090/dashboards/{dashboard_id}",
+            "timestamp": datetime.now().isoformat()
+        }
+            
+    except ImportError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Módulo create_dashboard não encontrado: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao criar dashboard: {str(e)}"
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

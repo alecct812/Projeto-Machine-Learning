@@ -268,3 +268,23 @@ BEGIN
     RAISE NOTICE 'Views: movie_stats, user_stats, top_movies, cluster_distribution';
     RAISE NOTICE '================================================';
 END $$;
+
+-- ====================================================================
+-- BANCOS DE DADOS ADICIONAIS PARA THINGSBOARD E TRENDZ
+-- ====================================================================
+
+-- Criar banco de dados para ThingsBoard
+CREATE DATABASE thingsboard;
+
+-- Criar banco de dados para Trendz Analytics
+CREATE DATABASE trendz;
+
+-- Mensagem de confirmação
+DO $$
+BEGIN
+    RAISE NOTICE '================================================';
+    RAISE NOTICE 'Bancos de dados adicionais criados!';
+    RAISE NOTICE '- thingsboard: Para plataforma ThingsBoard';
+    RAISE NOTICE '- trendz: Para Trendz Analytics';
+    RAISE NOTICE '================================================';
+END $$;
