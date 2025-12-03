@@ -176,19 +176,42 @@ curl -X POST http://localhost:8000/etl/run
 
 ### Passo 8: Visualizar Experimentos no MLFlow
 
-1. Acesse: http://localhost:5000
+1. Acesse: http://localhost:5001
 2. Navegue pelos experimentos registrados
 3. Compare métricas entre diferentes modelos
 
-### Passo 9: Visualizar Dashboard (Trendz/ThingsBoard)
+### Passo 9: Visualizar Dashboard ThingsBoard
 
-> **Nota:** Esta etapa será configurada na Parte 5 do projeto.
+1. **Subir o ThingsBoard:**
+```bash
+docker-compose up -d thingsboard
+```
 
-Para acessar o dashboard:
+2. **Aguardar inicialização** (30-60 segundos)
 
-1. Acesse: http://localhost:9090 (ou porta configurada)
-2. Importe o dashboard exportado da pasta `trendz/`
-3. Visualize as métricas em tempo real
+3. **Acessar interface:**
+   - URL: http://localhost:9090
+   - Usuário: `tenant@thingsboard.org`
+   - Senha: `tenant`
+
+4. **Sincronizar dados:**
+```bash
+curl -X POST http://localhost:8000/thingsboard/sync
+```
+
+5. **Importar dashboards:**
+   - Vá para **Dashboards** → **+** → **Import**
+   - Importe os arquivos em `trendz/`:
+     - `dashboard_model_metrics.json`
+     - `dashboard_dataset_stats.json`
+     - `dashboard_top_movies.json`
+
+6. **Visualizar insights:**
+   - Métricas de modelos ML (RMSE, Precision, Recall)
+   - Estatísticas do dataset (totais, médias)
+   - Top filmes recomendados e análises
+
+📚 **Guia completo:** [trendz/README_THINGSBOARD.md](trendz/README_THINGSBOARD.md)
 
 ---
 
@@ -199,7 +222,8 @@ Para acessar o dashboard:
 | **FastAPI (Swagger)** | http://localhost:8000/docs | -                                                                        |
 | **MinIO Console**     | http://localhost:9001      | User: `projeto_ml_admin`<br>Password: `cavalo-nimbus-xbox`                          |
 | **PostgreSQL**        | `localhost:5438`           | User: `ml_user`<br>Password: `ml_password_2025`<br>Database: `movielens` |
-| **MLFlow UI**         | http://localhost:5000      | - (Rastreamento de experimentos)                                         |
+| **MLFlow UI**         | http://localhost:5001      | - (Rastreamento de experimentos)                                         |
+| **ThingsBoard**       | http://localhost:9090      | User: `tenant@thingsboard.org`<br>Password: `tenant`                    |
 
 ---
 
@@ -226,7 +250,7 @@ curl -X POST http://localhost:8000/etl/run
 # Execute todas as células
 
 # 6. Visualizar resultados no MLFlow
-# Acesse: http://localhost:5000
+# Acesse: http://localhost:5001
 
 # 7. Gerar visualizações
 # Acesse: reports/ para ver os plots gerados
@@ -491,7 +515,7 @@ python setup_mlflow.py
 ```
 
 3. **Acessar interface:**
-- MLflow UI: http://localhost:5000
+- MLflow UI: http://localhost:5001
 
 4. **No notebook Jupyter:**
 ```python
@@ -540,7 +564,7 @@ Para mais detalhes, consulte: **[MLFLOW_GUIDE.md](MLFLOW_GUIDE.md)**
 - [x] **Parte 2:** ETL MinIO → PostgreSQL ✅
 - [x] **Parte 3:** Análise exploratória e modelagem ✅
 - [x] **Parte 4:** MLflow - Rastreamento de experimentos ✅
-- [ ] **Parte 5:** Dashboard e visualização (ThingsBoard/Trendz)
+- [x] **Parte 5:** Dashboard e visualização (ThingsBoard) ✅
 
 ---
 

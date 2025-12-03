@@ -60,6 +60,10 @@ services:
       POSTGRES_DB: movielens
       POSTGRES_USER: ml_user
       POSTGRES_PASSWORD: ml_password_2025
+      THINGSBOARD_URL: http://thingsboard:9090
+      THINGSBOARD_USERNAME: tenant@thingsboard.org
+      THINGSBOARD_PASSWORD: tenant
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     volumes:
       - ./fastapi:/app
       - ./archive:/data/archive:ro # Dados do dataset em modo read-only
@@ -75,7 +79,7 @@ services:
     build: ./mlflow
     container_name: movielens_mlflow
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       # Backend Store (PostgreSQL) - Armazena metadata dos experimentos
       MLFLOW_BACKEND_STORE_URI: postgresql://ml_user:ml_password_2025@postgres:5432/movielens
@@ -102,6 +106,21 @@ services:
       --host 0.0.0.0
       --port 5000
 
+  # ThingsBoard - Visualização e Dashboards
+  thingsboard:
+    image: thingsboard/tb-postgres:3.6.2
+    container_name: movielens_thingsboard
+    ports:
+      - "9090:9090"   # Interface Web
+    environment:
+      TB_QUEUE_TYPE: in-memory
+    volumes:
+      - thingsboard_data:/data
+      - thingsboard_logs:/var/log/thingsboard
+    networks:
+      - ml_network
+    restart: unless-stopped
+
 volumes:
   minio_data:
     name: movielens_minio_data
@@ -111,6 +130,12 @@ volumes:
     driver: local
   mlflow_data:
     name: movielens_mlflow_data
+    driver: local
+  thingsboard_data:
+    name: movielens_thingsboard_data
+    driver: local
+  thingsboard_logs:
+    name: movielens_thingsboard_logs
     driver: local
 
 networks:

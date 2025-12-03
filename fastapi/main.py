@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from minio_client import MinIOClient
 from postgres_client import PostgreSQLClient
 from etl_minio_postgres import MovieLensETL
+from thingsboard_client import ThingsBoardClient
 
 from contextlib import asynccontextmanager
 
@@ -300,8 +301,9 @@ async def ingest_movielens_dataset():
         errors = []
         
         # Arquivos principais do MovieLens
+        # Nota: usando ua.base (80% dos dados) em vez de u.data
         files_to_upload = {
-            "u.data": "ratings/u.data",
+            "ua.base": "ratings/u.data",  # Renomeando para u.data para compatibilidade
             "u.user": "users/u.user",
             "u.item": "items/u.item",
             "u.genre": "metadata/u.genre",
@@ -558,6 +560,75 @@ async def get_top_movies(limit: int = 10):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao obter top filmes: {str(e)}"
         )
+
+
+# ====================================================================
+# ENDPOINTS THINGSBOARD (PARTE 5)
+# ====================================================================
+
+@app.post("/thingsboard/sync", tags=["ThingsBoard"])
+async def sync_thingsboard():
+    """
+    Sincroniza todos os dados com o ThingsBoard
+    
+    Este endpoint:
+    1. Envia métricas dos modelos ML
+    2. Envia estatísticas do dataset
+    3. Envia top filmes mais bem avaliados
+    
+    O ThingsBoard deve estar rodando em: http://thingsboard:9090
+    """
+    try:
+        client = ThingsBoardClient()
+        results = client.sync_all()
+        
+        if not results.get("authenticated"):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Não foi possível autenticar no ThingsBoard"
+            )
+        
+        success_count = sum(1 for k, v in results.items() if k != "authenticated" and v)
+        total_count = len(results) - 1
+        
+        return {
+            "message": "Sincronização com ThingsBoard concluída",
+            "status": "success" if success_count == total_count else "partial",
+            "results": results,
+            "success_rate": f"{success_count}/{total_count}",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao sincronizar com ThingsBoard: {str(e)}"
+        )
+
+
+@app.get("/thingsboard/health", tags=["ThingsBoard"])
+async def thingsboard_health():
+    """Verifica conexão com ThingsBoard"""
+    try:
+        import requests
+        
+        tb_url = "http://thingsboard:9090/api/noauth/health"
+        response = requests.get(tb_url, timeout=5)
+        
+        return {
+            "thingsboard_available": response.status_code == 200,
+            "status": "healthy" if response.status_code == 200 else "unhealthy",
+            "url": tb_url,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "thingsboard_available": False,
+            "status": "unreachable",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 
 if __name__ == "__main__":
