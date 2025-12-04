@@ -67,29 +67,30 @@ cd movie-recommender-ml
 
 1. Baixe o dataset [MovieLens 100K](https://files.grouplens.org/datasets/movielens/ml-100k.zip)
 2. Extraia o conteúdo do arquivo `.zip`
-3. Copie a pasta `ml-100k/` para dentro do diretório `archive/` do projeto:
+3. Copie a pasta `ml-100k/` para dentro do diretório `fastapi/data/` do projeto:
 
 ```bash
 # Linux/Mac
-mkdir -p archive
-cp -r /caminho/para/ml-100k archive/
+mkdir -p fastapi/data
+cp -r /caminho/para/ml-100k fastapi/data/
 
 # Windows PowerShell
-New-Item -ItemType Directory -Force -Path archive
-Copy-Item -Recurse C:\caminho\para\ml-100k archive\
+New-Item -ItemType Directory -Force -Path fastapi\data
+Copy-Item -Recurse C:\caminho\para\ml-100k fastapi\data\
 ```
 
 Estrutura esperada:
 
 ```
 projeto/
-└── archive/
-    └── ml-100k/
-        ├── u.data
-        ├── u.user
-        ├── u.item
-        ├── u.genre
-        └── ...
+└── fastapi/
+    └── data/
+        └── ml-100k/
+            ├── u.data
+            ├── u.user
+            ├── u.item
+            ├── u.genre
+            └── ...
 ```
 
 ### Passo 3: Levantar a Infraestrutura
@@ -103,13 +104,14 @@ docker-compose up -d
 **Saída esperada:**
 
 ```
-[+] Running 5/5
- ✔ Network projeto_default      Created
- ✔ Container minio              Started
- ✔ Container postgres           Started
- ✔ Container fastapi            Started
- ✔ Container jupyterlab         Started
- ✔ Container mlflow             Started
+[+] Running 6/6
+ ✔ Network movielens_network         Created
+ ✔ Container movielens_minio         Started
+ ✔ Container movielens_postgres      Started
+ ✔ Container movielens_fastapi       Started
+ ✔ Container movielens_jupyterlab    Started
+ ✔ Container movielens_mlflow        Started
+ ✔ Container movielens_thingsboard   Started
 ```
 
 ### Passo 4: Verificar Status dos Containers
@@ -121,12 +123,13 @@ docker-compose ps
 **Saída esperada:**
 
 ```
-NAME         COMMAND                  SERVICE      STATUS       PORTS
-fastapi      "uvicorn main:app..."    fastapi      Up           0.0.0.0:8000->8000/tcp
-minio        "/usr/bin/docker-ent…"   minio        Up           0.0.0.0:9000-9001->9000-9001/tcp
-postgres     "docker-entrypoint..."   postgres     Up           0.0.0.0:5432->5432/tcp
-jupyterlab   "jupyter lab..."         jupyterlab   Up           0.0.0.0:8888->8888/tcp
-mlflow       "mlflow server..."       mlflow       Up           0.0.0.0:5000->5000/tcp
+NAME                    STATUS       PORTS
+movielens_fastapi       Up           0.0.0.0:8000->8000/tcp
+movielens_minio         Up           0.0.0.0:9000-9001->9000-9001/tcp
+movielens_postgres      Up           0.0.0.0:5438->5432/tcp
+movielens_jupyterlab    Up           0.0.0.0:8888->8888/tcp
+movielens_mlflow        Up           0.0.0.0:5001->5000/tcp
+movielens_thingsboard   Up           0.0.0.0:9090->9090/tcp
 ```
 
 ### Passo 5: Carregar Dados no MinIO (S3)
@@ -146,7 +149,7 @@ docker-compose exec fastapi python load_data.py
 **Verificar no console MinIO:**
 
 - Acesse: http://localhost:9001
-- Login: `minioadmin` / `minioadmin123`
+- Login: `projeto_ml_admin` / `cavalo-nimbus-xbox`
 - Verifique o bucket `movielens-data`
 
 ### Passo 6: Executar ETL para PostgreSQL
@@ -166,7 +169,7 @@ curl -X POST http://localhost:8000/etl/run
 ### Passo 7: Acessar o JupyterLab
 
 1. Acesse: http://localhost:8888
-2. Senha: `ml_password_2025` (configurada no `docker-compose.yml`)
+2. Não precisa de senha (acesso direto)
 3. Abra o notebook: `notebooks/parte3_analise_modelagem.ipynb`
 4. Execute as células sequencialmente para:
    - Conectar ao PostgreSQL
@@ -196,22 +199,18 @@ docker-compose up -d thingsboard
 
 4. **Sincronizar dados:**
 ```bash
-curl -X POST http://localhost:8000/thingsboard/sync
+docker-compose exec fastapi python thingsboard_client.py
+docker-compose exec fastapi python sync_models_real.py
 ```
 
 5. **Importar dashboards:**
    - Vá para **Dashboards** → **+** → **Import**
-   - Importe os arquivos em `trendz/`:
-     - `dashboard_model_metrics.json`
-     - `dashboard_dataset_stats.json`
-     - `dashboard_top_movies.json`
+   - Importe o arquivo `trendz/dashboard_movie.json`
 
 6. **Visualizar insights:**
-   - Métricas de modelos ML (RMSE, Precision, Recall)
-   - Estatísticas do dataset (totais, médias)
-   - Top filmes recomendados e análises
-
-📚 **Guia completo:** [trendz/README_THINGSBOARD.md](trendz/README_THINGSBOARD.md)
+   - Métricas de modelos ML (RMSE comparativo)
+   - Comparação entre KNN Paper, KNN Tunado e Random Forest
+   - Dispersão das avaliações por faixas
 
 ---
 
@@ -266,60 +265,56 @@ Após executar o notebook de modelagem, os gráficos são salvos automaticamente
 
 ```
 reports/
-├── elbow_method.png              # Método do cotovelo (K-Means)
-├── cluster_distribution.png       # Distribuição de clusters
-├── ranking_metrics.png            # Precision@K, Recall@K
-├── error_distribution.png         # Distribuição de erros
-├── feature_importance.png         # Importância das features (Random Forest)
-└── comparison_table.png           # Comparação entre modelos
+├── elbow_method_wcss.png              # Método do cotovelo (K-Means)
+├── cluster_distribution.png           # Distribuição de clusters
+├── eda_visualizacoes.png              # Visualizações EDA
+├── eda_scatter_plots.png              # Gráficos de dispersão
+├── hyperparameter_tuning_heatmap.png  # Heatmap de hiperparâmetros
+├── metrics_evaluation_summary.png     # Resumo das métricas
+└── random_forest_feature_importance.png # Importância das features
 ```
 
-### Opção 2: Dashboard Interativo (ThingsBoard/Trendz)
+### Opção 2: Dashboard Interativo (ThingsBoard)
 
-> **Status:** Em desenvolvimento (Parte 5)
-
-1. Acesse o dashboard configurado
-2. Visualize métricas em tempo real:
-   - RMSE por modelo
-   - Precision@K e Recall@K
-   - Distribuição de erros
-   - Top filmes recomendados
+1. Acesse: http://localhost:9090
+2. Login: `tenant@thingsboard.org` / `tenant`
+3. Importe o dashboard de `trendz/dashboard_movie.json`
+4. Visualize métricas:
+   - Comparação de RMSE entre modelos
+   - KNN Paper vs KNN Tunado vs Random Forest
+   - Dispersão das avaliações
 
 ---
 
 ## 📁 Estrutura do Projeto
 
 ```
-projeto/
+/
 ├── docker-compose.yml          # Orquestração dos contêineres
-├── README.md                   # Descrição do projeto
-├── LICENSE                     # Licença MIT
-│
+├── jupyterlab/                 # Ambiente de análise e exploração (Dockerfile e configs)
+│   ├── Dockerfile
+│   └── requirements.txt
+├── mlflow/                     # Configuração e armazenamento de experimentos
+│   └── Dockerfile
 ├── fastapi/                    # Camada de ingestão (API)
 │   ├── Dockerfile
 │   ├── main.py                 # Aplicação FastAPI
 │   ├── minio_client.py         # Cliente MinIO/S3
 │   ├── postgres_client.py      # Cliente PostgreSQL
+│   ├── thingsboard_client.py   # Cliente ThingsBoard
 │   ├── etl_minio_postgres.py   # ETL MinIO → PostgreSQL
 │   ├── load_data.py            # Script de carga inicial
-│   └── requirements.txt
-│
-├── jupyterlab/                 # Ambiente de análise e exploração
-│   ├── Dockerfile
-│   └── (configurações)
-│
-├── mlflow/                     # Configuração e armazenamento de experimentos
-│   └── (tracking de modelos)
-│
+│   ├── requirements.txt
+│   ├── data/                   # Dataset MovieLens
+│   │   └── ml-100k/
+│   └── postgres/               # Scripts SQL
+│       └── init.sql
 ├── notebooks/                  # Notebooks de tratamento, visualização e modelagem
-│   ├── parte3_analise_modelagem.ipynb
-│   └── (outros notebooks)
-│
+│   └── parte3_analise_modelagem.ipynb
 ├── trendz/                     # Dashboards exportados
-│   └── (configurações de visualização)
-│
-└── reports/                    # Figuras com os plots dos resultados
-    └── (visualizações geradas)
+├── reports/                    # Figuras com os plots dos resultados
+├── README.md                   # Descrição do projeto
+└── LICENSE                     # Licença
 ```
 
 ---
@@ -387,7 +382,7 @@ Carrega todo o dataset MovieLens para o MinIO automaticamente
 
 ```mermaid
 graph LR
-    A[Dataset Local<br/>archive/ml-100k/] -->|load_data.py| B[FastAPI]
+    A[Dataset Local<br/>fastapi/data/ml-100k/] -->|load_data.py| B[FastAPI]
     B -->|boto3/S3 API| C[MinIO]
     C -->|Organização| D[Buckets:<br/>- ratings<br/>- users<br/>- items<br/>- metadata]
 ```
@@ -482,11 +477,11 @@ curl http://localhost:9000/minio/health/live
 
 ### Problema: Erro ao fazer upload
 
-Verifique as permissões do diretório `archive/`:
+Verifique as permissões do diretório de dados:
 
 ```bash
 # No Linux/Mac
-chmod -R 755 archive/
+chmod -R 755 fastapi/data/
 
 # Ou monte o volume com permissões corretas no docker-compose.yml
 ```
@@ -510,8 +505,8 @@ docker-compose up -d
 ```
 
 2. **Configurar bucket MLflow (primeira vez):**
-```powershell
-python setup_mlflow.py
+```bash
+docker-compose exec fastapi python create_mlflow_bucket.py
 ```
 
 3. **Acessar interface:**
@@ -520,7 +515,7 @@ python setup_mlflow.py
 4. **No notebook Jupyter:**
 ```python
 import mlflow
-mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_tracking_uri("http://localhost:5001")
 mlflow.set_experiment("MovieLens_Recommender")
 
 with mlflow.start_run(run_name="meu_experimento"):
@@ -538,23 +533,14 @@ runs = mlflow.search_runs()
 model = mlflow.sklearn.load_model("runs:/<run_id>/model")
 ```
 
-### Arquivos relacionados ao MLflow
-
-- `mlflow_config.py` - Módulo de configuração
-- `mlflow_example.py` - Script de exemplo completo
-- `setup_mlflow.py` - Script de inicialização do bucket MinIO
-- `MLFLOW_GUIDE.md` - Guia detalhado de uso
-
 ### Arquitetura do MLflow
 
 ```
-MLflow Tracking Server (http://localhost:5000)
+MLflow Tracking Server (http://localhost:5001)
 ├── Backend Store: PostgreSQL (metadata)
 ├── Artifact Store: MinIO S3 (modelos e arquivos)
 └── UI: Interface web para visualização
 ```
-
-Para mais detalhes, consulte: **[MLFLOW_GUIDE.md](MLFLOW_GUIDE.md)**
 
 ---
 

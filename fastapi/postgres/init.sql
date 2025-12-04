@@ -255,7 +255,7 @@ INSERT INTO db_metadata (event, description)
 VALUES ('schema_initialized', 'Database schema created successfully for MovieLens recommendation system');
 
 -- ====================================================================
--- FINALIZAÇÃ
+-- FINALIZAÇÃO
 -- ====================================================================
 
 -- Mensagem de sucesso (via RAISE NOTICE)
@@ -268,3 +268,4 @@ BEGIN
     RAISE NOTICE 'Views: movie_stats, user_stats, top_movies, cluster_distribution';
     RAISE NOTICE '================================================';
 END $$;
+

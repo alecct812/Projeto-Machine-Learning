@@ -300,10 +300,9 @@ async def ingest_movielens_dataset():
         uploaded_files = []
         errors = []
         
-        # Arquivos principais do MovieLens
-        # Nota: usando ua.base (80% dos dados) em vez de u.data
+        # Arquivos principais do MovieLens (100k dataset completo)
         files_to_upload = {
-            "ua.base": "ratings/u.data",  # Renomeando para u.data para compatibilidade
+            "u.data": "ratings/u.data",  # Dataset completo com 100k avaliações
             "u.user": "users/u.user",
             "u.item": "items/u.item",
             "u.genre": "metadata/u.genre",

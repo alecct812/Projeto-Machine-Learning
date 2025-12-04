@@ -1,0 +1,30 @@
+# JupyterLab - Dependências para Análise e Modelagem
+# Sistema de Recomendação MovieLens
+
+# Jupyter
+jupyterlab>=4.0.0
+ipykernel>=6.0.0
+
+# Data Science
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+
+# Visualização
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# MLflow
+mlflow>=2.8.0
+
+# Database
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
+
+# Utilitários
+python-dotenv>=1.0.0
+requests>=2.31.0
+

@@ -1,4 +1,5 @@
-# Docker Compose removido a versão (obsoleta no Docker Compose v2)
+# Docker Compose - Sistema de Recomendação MovieLens
+# Projeto: Aprendizado de Máquina - CESAR School
 
 services:
   # MinIO - Armazenamento de objetos (compatível com S3)
@@ -35,7 +36,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./fastapi/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - ml_network
     healthcheck:
@@ -66,13 +67,35 @@ services:
       MLFLOW_TRACKING_URI: http://mlflow:5000
     volumes:
       - ./fastapi:/app
-      - ./archive:/data/archive:ro # Dados do dataset em modo read-only
+      - ./fastapi/data:/data/archive:ro
     depends_on:
       - minio
       - postgres
     networks:
       - ml_network
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # JupyterLab - Ambiente de Análise e Exploração
+  jupyterlab:
+    build: ./jupyterlab
+    container_name: movielens_jupyterlab
+    ports:
+      - "8888:8888"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: movielens
+      POSTGRES_USER: ml_user
+      POSTGRES_PASSWORD: ml_password_2025
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./reports:/app/reports
+    depends_on:
+      - postgres
+      - mlflow
+    networks:
+      - ml_network
 
   # MLflow - Rastreamento de Experimentos
   mlflow:
@@ -81,9 +104,7 @@ services:
     ports:
       - "5001:5000"
     environment:
-      # Backend Store (PostgreSQL) - Armazena metadata dos experimentos
       MLFLOW_BACKEND_STORE_URI: postgresql://ml_user:ml_password_2025@postgres:5432/movielens
-      # Artifact Store (MinIO S3) - Armazena modelos e artifacts
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: projeto_ml_admin
       AWS_SECRET_ACCESS_KEY: cavalo-nimbus-xbox
@@ -111,7 +132,7 @@ services:
     image: thingsboard/tb-postgres:3.6.2
     container_name: movielens_thingsboard
     ports:
-      - "9090:9090"   # Interface Web
+      - "9090:9090"
     environment:
       TB_QUEUE_TYPE: in-memory
     volumes:
