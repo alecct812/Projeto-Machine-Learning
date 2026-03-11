@@ -12,7 +12,11 @@
 
 ## 👥 Equipe do Projeto
 
-- **[Seu Nome Completo]** - [@seu-usuario-github](https://github.com/seu-usuario)
+- **[Alec C. Theotônio]** - [@alecct812](https://github.com/alecct812)
+- **[Eurivaldo José de Vasconcelos Filho]**
+- **[Pedro Wanderley de Lira Santos]**
+- **[Felipe Rodrigues Serpa Azevedo]**
+- **[Lucas Ferraz Santana Filgueiras]**
 
 > 💡 **Nota:** Adicione aqui o nome completo e o usuário GitHub de todos os membros da equipe.
 
