@@ -18,8 +18,6 @@
 - **[Felipe Rodrigues Serpa Azevedo]**
 - **[Lucas Ferraz Santana Filgueiras]**
 
-> 💡 **Nota:** Adicione aqui o nome completo e o usuário GitHub de todos os membros da equipe.
-
 ---
 
 ## 📋 Sobre o Projeto
